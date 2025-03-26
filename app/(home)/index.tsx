@@ -3,9 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import moment from 'moment';
 import 'moment/locale/ko';
+import { removeItem, getItem } from '@/hooks/useAsyncStorage';
+import { logout } from '@/apis/api';
+
 export default function HomeScreen({ navigation }: { navigation: any }) {
     const colorScheme = useColorScheme();
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState<any>(undefined);
     const [isLoading, setIsLoading] = useState(true);
 
     const moment = require('moment');
@@ -14,7 +17,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     const [weeks, setWeeks] = useState(week);
     const [selectedDate, setSelectedDate] = useState(moment().format('dddd'));
     const [calendar, setCalendar] = useState([]);
-
+    const [refreshToken, setRefreshToken] = useState('');
     useEffect(() => {
         const calendar = [];
         if (day !== 3) {
@@ -26,11 +29,38 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
             }
         }
     }, [day]);
-    console.log(weeks);
+    useEffect(() => {
+        const fetchUser = async () => {
+            const storedRefreshToken = await getItem('refreshToken');
+            console.log(storedRefreshToken);
+            setRefreshToken(storedRefreshToken || '');
+            const storedUser = await getItem('user');
+            if (storedUser) {
+                setUser(JSON.parse(storedUser));
+            }
+        };
+        fetchUser();
+    }, []);
+
+    const handleLogout = async (user: any) => {
+        try {
+            const user_id = parseInt(user.id);
+            const response = await logout(user_id);
+            await removeItem('accessToken');
+            await removeItem('refreshToken');
+            await removeItem('user');
+            navigation.navigate('(login)');
+        } catch (error) {
+            console.error('로그아웃 실패:', error);
+        }
+    };
+
     return (
         <View style={[styles.container, colorScheme === 'dark' && styles.darkContainer]}>
             <Text style={[styles.title, colorScheme === 'dark' && styles.darkText]}>홈</Text>
-            <Text style={[styles.logoutText, colorScheme === 'dark' && styles.darkLogoutText]}>로그아웃</Text>
+            <Text style={[styles.logoutText, colorScheme === 'dark' && styles.darkLogoutText]} onPress={() => handleLogout(user)}>
+                로그아웃
+            </Text>
             <View style={styles.weekContainer}>
                 {weeks.map((week, index) =>
                     index === 3 ? (

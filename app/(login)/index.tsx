@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity } from 'react-native';
 import { login } from '../../apis/api';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { setItem, getItem } from '@/hooks/useAsyncStorage';
 
-
-export default function LoginScreen({navigation}: {navigation: any}) {
+export default function LoginScreen({ navigation }: { navigation: any }) {
     const colorScheme = useColorScheme();
 
     const [formData, setFormData] = useState({
@@ -23,64 +23,70 @@ export default function LoginScreen({navigation}: {navigation: any}) {
     });
 
     const handleChange = (field: keyof typeof formData, value: string) => {
-        setFormData(prev => ({...prev, [field]: value}));
-        if(!isDirty[field as keyof typeof isDirty]) {
-            setIsDirty(prev => ({...prev, [field]: true}));
+        setFormData((prev) => ({ ...prev, [field]: value }));
+        if (!isDirty[field as keyof typeof isDirty]) {
+            setIsDirty((prev) => ({ ...prev, [field]: true }));
         }
-    }
+    };
 
     useEffect(() => {
-        if(isDirty.email) validateEmail(formData.email);
-        if(isDirty.password) validatePassword(formData.password);
+        if (isDirty.email) validateEmail(formData.email);
+        if (isDirty.password) validatePassword(formData.password);
     }, [formData, isDirty]);
-    
+
     const validateEmail = (email: string) => {
         const pattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        if(!pattern.test(email)) {
-            setErrors(prev => ({...prev, email: '이메일 형식이 올바르지 않습니다.'}));
+        if (!pattern.test(email)) {
+            setErrors((prev) => ({ ...prev, email: '이메일 형식이 올바르지 않습니다.' }));
         } else {
-            setErrors(prev => ({...prev, email: ''}));
+            setErrors((prev) => ({ ...prev, email: '' }));
         }
-    }
+    };
     const validatePassword = (password: string) => {
-        if(password.length < 8) {
-            setErrors(prev => ({...prev, password: '비밀번호는 8자 이상이어야 합니다.'}));
+        if (password.length < 8) {
+            setErrors((prev) => ({ ...prev, password: '비밀번호는 8자 이상이어야 합니다.' }));
         } else {
-            setErrors(prev => ({...prev, password: ''}));
+            setErrors((prev) => ({ ...prev, password: '' }));
         }
-    }
+    };
 
-    const handleLogin = async () =>{
-        if(errors.email || errors.password) {
+    const handleLogin = async () => {
+        if (errors.email || errors.password) {
             return;
         }
         try {
             const response = await login(formData.email, formData.password);
             Alert.alert('로그인 성공', '로그인이 완료되었습니다.');
+            console.log(response);
+
+            // 비동기 데이터 저장
+            await setItem('user', JSON.stringify(response.user));
+            await setItem('accessToken', response.accessToken);
+            await setItem('refreshToken', response.refreshToken);
             navigation.navigate('(home)');
         } catch (error) {
             console.error('로그인 실패:', error);
             Alert.alert('로그인 실패', '이메일 또는 비밀번호가 올바르지 않습니다.');
         }
-    }
+    };
     const handleSignup = () => {
         navigation.navigate('(signup)');
-    }
+    };
 
     return (
         <View style={[styles.container, colorScheme === 'dark' && styles.darkContainer]}>
             <Text style={[styles.title, colorScheme === 'dark' && styles.darkText]}>로그인</Text>
             <TextInput
                 style={[styles.input, colorScheme === 'dark' && styles.darkInput]}
-                placeholder="이메일"
+                placeholder='이메일'
                 value={formData.email}
-                onChangeText={text => handleChange('email', text)}
-            />  
+                onChangeText={(text) => handleChange('email', text)}
+            />
             <TextInput
                 style={[styles.input, colorScheme === 'dark' && styles.darkInput]}
-                placeholder="비밀번호"
+                placeholder='비밀번호'
                 value={formData.password}
-                onChangeText={text => handleChange('password', text)}
+                onChangeText={(text) => handleChange('password', text)}
                 secureTextEntry
             />
             {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
@@ -94,7 +100,7 @@ export default function LoginScreen({navigation}: {navigation: any}) {
                 </TouchableOpacity>
             </View>
         </View>
-    )
+    );
 }
 
 const styles = StyleSheet.create({
@@ -118,7 +124,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(33,150,243,1.00)',
         padding: 10,
         marginTop: 5,
-    },  
+    },
     buttonText: {
         color: '#ffffff',
     },
@@ -145,7 +151,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
     },
     darkInput: {
-        backgroundColor: '#1e1e1e', 
+        backgroundColor: '#1e1e1e',
         color: '#ffffff',
     },
     errorText: {
