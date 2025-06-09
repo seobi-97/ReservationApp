@@ -1,14 +1,4 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5500';
-
-const axiosInstance = axios.create({
-    baseURL: API_URL,
-    withCredentials: true,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-});
+import { axiosInstance } from './axiosInstance';
 
 export const login = async (email: string, password: string) => {
     try {
@@ -26,19 +16,6 @@ export const signup = async (name: string, email: string, password: string) => {
         return response.data;
     } catch (error) {
         console.error('Signup failed:', error);
-        throw error;
-    }
-};
-
-export const checkToken = async (user: any, refreshToken: string) => {
-    try {
-        const response = await axiosInstance.post(`/auth/token`, {
-            user: user,
-            refreshToken: refreshToken,
-        });
-        return response.data;
-    } catch (error) {
-        console.error('Check token failed:', error);
         throw error;
     }
 };
@@ -64,22 +41,43 @@ export const getList = async (id?: number) => {
     }
 };
 
-export const getLists = async () => {
+export const getClasses = async () => {
     try {
         const response = await axiosInstance.get(`/class/list`);
         return response.data;
     } catch (error) {
-        console.error('Get list failed:', error);
+        console.error('Get classes failed:', error);
         throw error;
     }
 };
 
-export const postList = async (title: string, body: string) => {
+export const createClass = async (title: string, creator_id: number, start_date: string, description: string, status: string, capacity: number) => {
     try {
-        const response = await axiosInstance.post(`/class/list`, { title, body });
+        const response = await axiosInstance.post(`/class/create`, { title, creator_id, start_date, description, status, capacity });
         return response.data;
     } catch (error) {
-        console.error('Post list failed:', error);
+        console.error('Create class failed:', error);
+        throw error;
+    }
+};
+
+export const reserveClass = async (class_id: number, user_id: number) => {
+    try {
+        const response = await axiosInstance.post(`/class/reserve`, { class_id, user_id });
+        return response.data;
+    } catch (error) {
+        console.error('Reserve class failed:', error);
+        throw error;
+    }
+};
+
+// 401 에러 시, 토큰 검증
+export const checkToken = async (id: number) => {
+    try {
+        const response = await axiosInstance.post(`/auth/token`, { id: id });
+        return response.data;
+    } catch (error) {
+        console.error('Check token failed:', error);
         throw error;
     }
 };

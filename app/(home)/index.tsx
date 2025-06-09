@@ -4,9 +4,10 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import moment from 'moment';
 import 'moment/locale/ko';
 import { removeItem, getItem } from '@/hooks/useAsyncStorage';
-import { logout, getLists, postList } from '@/apis/api';
+import { logout, getClasses, createClass, reserveClass } from '@/apis/api';
 import Popup from '@/components/Popup';
 import { TABLE_HEAD } from '@/constants/table';
+
 interface List {
     id: number;
     title: string;
@@ -32,8 +33,10 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
 
     const [list, setList] = useState([]);
 
-    const [title1, setTitle1] = useState('');
-    const [title2, setTitle2] = useState('');
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [start_date, setStartDate] = useState(new Date());
+    const [capacity, setCapacity] = useState('1');
 
     // 입력 필드
     const inputFields = [
@@ -41,17 +44,32 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
             id: 1,
             title: '학습 목록 제목',
             type: 'text' as const,
-            value: title1,
-            onChange: setTitle1,
+            value: title,
+            onChange: setTitle,
             placeholder: '제목을 입력하세요',
         },
         {
             id: 2,
             title: '학습 목록 설명',
             type: 'text' as const,
-            value: title2,
-            onChange: setTitle2,
+            value: description,
+            onChange: setDescription,
             placeholder: '설명을 입력하세요',
+        },
+        {
+            id: 3,
+            title: '학습 목록 시작 날짜',
+            type: 'date' as const,
+            value: start_date,
+            onChange: setStartDate,
+        },
+        {
+            id: 4,
+            title: '학습 목록 최대 인원',
+            type: 'select' as const,
+            value: capacity,
+            onChange: setCapacity,
+            options: Array.from({ length: 30 }, (_, i) => (i + 1).toString()),
         },
     ];
 
@@ -64,7 +82,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
         },
         {
             label: '학습 목록 추가',
-            onPress: () => handlePostList(),
+            onPress: () => handleCreateClass(),
             action: 'submit',
         },
     ];
@@ -95,7 +113,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
 
     useEffect(() => {
         setIsLoading(true);
-        handleGetList();
+        handleGetClasses();
         setIsLoading(false);
     }, []);
 
@@ -116,9 +134,9 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
         }
     };
 
-    const handleGetList = async () => {
+    const handleGetClasses = async () => {
         try {
-            const response = await getLists();
+            const response = await getClasses();
             console.log(response);
             setList(response);
         } catch (error) {
@@ -126,68 +144,86 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
         }
     };
 
-    const handlePostList = async () => {
+    const handleCreateClass = async () => {
         try {
-            const response = await postList(title1, title2);
+            const response = await createClass(title, user.id, start_date.toISOString(), description, 'active', parseInt(capacity));
             console.log(response);
             setIsPopupOpen(false);
-            handleGetList();
+            handleGetClasses();
         } catch (error) {
             console.error('Add list failed:', error);
         }
     };
+
+    const handleReserveClass = async (class_id: number, user_id: number) => {
+        try {
+            const response = await reserveClass(class_id, user_id);
+            console.log(response);
+        } catch (error) {
+            console.error('Reserve class failed:', error);
+        }
+    };
+
     return (
-        <View style={[styles.container, colorScheme === 'dark' && styles.darkContainer]}>
-            <Text style={[styles.title, colorScheme === 'dark' && styles.darkText]}>홈</Text>
-            <Text style={[styles.logoutText, colorScheme === 'dark' && styles.darkLogoutText]} onPress={() => handleLogout(user)}>
-                로그아웃
-            </Text>
-            <View style={styles.weekContainer}>
-                {weeks.map((week, index) =>
-                    index === selectedDate ? (
-                        <Text key={index} style={[styles.toDayText, colorScheme === 'dark' && styles.darkToDayText]}>
-                            {week}
-                        </Text>
-                    ) : (
-                        <Text key={index} style={[styles.weekText, colorScheme === 'dark' && styles.darkWeekText]} onPress={() => handleClickDate(index)}>
-                            {week}
-                        </Text>
-                    )
-                )}
-            </View>
-            <View style={styles.listContainer}>
-                <View style={styles.addListButton}>
-                    <TouchableOpacity style={styles.button} onPress={() => setIsPopupOpen(true)}>
-                        <Text style={styles.buttonText}>학습 목록 추가</Text>
-                    </TouchableOpacity>
-                </View>
-                <View style={styles.tableContainer}>
-                    <View style={styles.tableHead}>
-                        {TABLE_HEAD.map((head) => (
-                            <Text key={head} style={styles.tableHeadText}>
-                                {head}
-                            </Text>
-                        ))}
+        <>
+            {isPopupOpen ? (
+                <Popup title='학습 목록 추가' inputs={inputFields} buttons={buttons} onSubmit={() => handleCreateClass()} />
+            ) : (
+                <View style={[styles.container, colorScheme === 'dark' && styles.darkContainer]}>
+                    <Text style={[styles.title, colorScheme === 'dark' && styles.darkText]}>홈</Text>
+                    <Text style={[styles.logoutText, colorScheme === 'dark' && styles.darkLogoutText]} onPress={() => handleLogout(user)}>
+                        로그아웃
+                    </Text>
+                    <View style={styles.weekContainer}>
+                        {weeks.map((week, index) =>
+                            index === selectedDate ? (
+                                <Text key={index} style={[styles.toDayText, colorScheme === 'dark' && styles.darkToDayText]}>
+                                    {week}
+                                </Text>
+                            ) : (
+                                <Text key={index} style={[styles.weekText, colorScheme === 'dark' && styles.darkWeekText]} onPress={() => handleClickDate(index)}>
+                                    {week}
+                                </Text>
+                            )
+                        )}
+                    </View>
+                    <View style={styles.listContainer}>
+                        <View style={styles.addListButton}>
+                            <TouchableOpacity style={styles.button} onPress={() => setIsPopupOpen(true)}>
+                                <Text style={styles.buttonText}>학습 목록 추가</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.tableContainer}>
+                            <View style={styles.tableHead}>
+                                {TABLE_HEAD.map((head) => (
+                                    <Text key={head} style={styles.tableHeadText}>
+                                        {head}
+                                    </Text>
+                                ))}
+                            </View>
+                        </View>
+                        {list.length > 0 ? (
+                            list.map((item: List) => (
+                                <View key={item.id} style={styles.tableRow}>
+                                    <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>{item.id}</Text>
+                                    <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>{item.title}</Text>
+                                    <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>{item.body}</Text>
+                                    <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>{item.user_id}</Text>
+                                    <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>{item.user_id}</Text>
+                                    <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>{moment(item.created_at).format('YYYY-MM-DD')}</Text>
+                                    <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>{item.status}</Text>
+                                    <Button title='학습하기' onPress={() => handleReserveClass(item.id, user.id)} />
+                                </View>
+                            ))
+                        ) : (
+                            <View style={styles.emptyList}>
+                                <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>등록된 학습 목록이 없습니다.</Text>
+                            </View>
+                        )}
                     </View>
                 </View>
-                {list.length > 0 ? (
-                    list.map((item: List) => (
-                        <View key={item.id} style={styles.tableRow}>
-                            <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>{item.id}</Text>
-                            <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>{item.title}</Text>
-                            <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>{item.body}</Text>
-                            <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>{item.user_id}</Text>
-                            <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>{moment(item.created_at).format('YYYY-MM-DD')}</Text>
-                            <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>{item.status}</Text>
-                            <Button title='학습하기' onPress={() => handleGetList()} />
-                        </View>
-                    ))
-                ) : (
-                    <Text style={[styles.listText, colorScheme === 'dark' && styles.darkListText]}>등록된 학습 목록이 없습니다.</Text>
-                )}
-            </View>
-            {isPopupOpen && <Popup title='학습 목록 추가' inputs={inputFields} buttons={buttons} onSubmit={() => handlePostList()} />}
-        </View>
+            )}
+        </>
     );
 }
 
@@ -260,9 +296,9 @@ const styles = StyleSheet.create({
     addListButton: {
         width: '100%',
         alignItems: 'flex-end',
+        marginBottom: 10,
     },
     button: {
-        width: '10%',
         backgroundColor: '#007BFF',
         padding: 10,
         borderRadius: 5,
@@ -290,5 +326,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+    },
+    emptyList: {
+        width: '100%',
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });
