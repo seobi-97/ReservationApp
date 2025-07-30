@@ -57,13 +57,14 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
         try {
             const response = await login(formData.email, formData.password);
             Alert.alert('로그인 성공', '로그인이 완료되었습니다.');
-            console.log(response);
 
             // 비동기 데이터 저장
-            await setItem('user', JSON.stringify(response.user));
-            await setItem('accessToken', response.accessToken);
-            await setItem('refreshToken', response.refreshToken);
-            navigation.navigate('(home)');
+            if (response.status === 200) {
+                await setItem('user', JSON.stringify(response.data.user));
+                await setItem('accessToken', response.data.accessToken);
+                await setItem('refreshToken', response.data.refreshToken);
+                navigation.navigate('(home)');
+            }
         } catch (error) {
             console.error('로그인 실패:', error);
             Alert.alert('로그인 실패', '이메일 또는 비밀번호가 올바르지 않습니다.');

@@ -7,7 +7,6 @@ import { removeItem, getItem } from '@/hooks/useAsyncStorage';
 import { logout, getClasses, createClass, reserveClass } from '@/apis/api';
 import Popup from '@/components/Popup';
 import { TABLE_HEAD } from '@/constants/table';
-
 interface List {
     id: number;
     title: string;
@@ -92,7 +91,6 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
         if (day !== 3) {
             if (day < 3) {
                 setWeeks([...weeks.slice(7 - 3 + day), ...weeks.slice(0, 3 + day + 1)]);
-                console.log(weeks);
             } else if (day > 3) {
                 setWeeks([...weeks.slice(day - 3), ...weeks.slice(0, day - 3)]);
             }
@@ -125,10 +123,13 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
         try {
             const user_id = parseInt(user.id);
             const response = await logout(user_id);
-            await removeItem('accessToken');
-            await removeItem('refreshToken');
-            await removeItem('user');
-            navigation.navigate('(login)');
+            if (response.status === 200) {
+                await removeItem('accessToken');
+                await removeItem('refreshToken');
+                await removeItem('user');
+                console.log('로그아웃 성공');
+                navigation.navigate('(login)');
+            }
         } catch (error) {
             console.error('로그아웃 실패:', error);
         }
@@ -137,8 +138,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     const handleGetClasses = async () => {
         try {
             const response = await getClasses();
-            console.log(response);
-            setList(response);
+            setList(response.data);
         } catch (error) {
             console.error('Get list failed:', error);
         }
@@ -147,7 +147,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     const handleCreateClass = async () => {
         try {
             const response = await createClass(title, user.id, start_date.toISOString(), description, 'active', parseInt(capacity));
-            console.log(response);
+            console.log(response.data);
             setIsPopupOpen(false);
             handleGetClasses();
         } catch (error) {
@@ -158,7 +158,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     const handleReserveClass = async (class_id: number, user_id: number) => {
         try {
             const response = await reserveClass(class_id, user_id);
-            console.log(response);
+            console.log(response.data);
         } catch (error) {
             console.error('Reserve class failed:', error);
         }
